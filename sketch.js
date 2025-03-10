@@ -206,4 +206,3 @@ function mouseClicked() {
   print(mouseX, mouseY);
   frameCounter = 0;
 }
-
