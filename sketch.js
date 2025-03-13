@@ -3,42 +3,175 @@ let option = 1;
 
 let pose = 1;
 let frameCounter = 0;
+let frameCounter2 = 0;
+let frameCounter3 = 0;
 const FRAME_DELAY = 60;
+const FRAME_DELAY2 = 20;
+const FRAME_DELAY3 = 20;
+
+let posX = 44;
+let posY = 684;
+let walkSpeed = 2; 
+
+let chainBroken = false;
+let walk = false;
+
+let isPaused = false;
+
 
 function setup() {
-  createCanvas(900, 900);
+  createCanvas(900, 900, WEBGL);
   background(255, 255, 255);
 }
 
 function draw() {
+  if (isPaused) return;
+
+  translate(-450, -450)
   background(255, 255, 255);
 
-  frameCounter++;
-  if (frameCounter >= FRAME_DELAY) {
-    frameCounter = 0;
-    pose = (pose % 6) + 1; 
+  if (option==1) {
+    frameCounter++;
+    if (frameCounter >= FRAME_DELAY) {
+      frameCounter = 0;
+      pose = (pose % 6) + 1; 
+    }
+
+    if (pose === 1) {
+      drawCage();
+      sitting();
+    } else if (pose === 2) {
+      drawCage();
+      standing();
+    } else if (pose === 3) {
+      drawCage();
+      push1();
+    } else if (pose === 4) {
+      bentCage();
+      push2();
+    } else if (pose == 5) {
+      bentCage();
+      walkAway1();
+    } else if (pose == 6) {
+      bentCage();
+      walkAway2();
+    }
   }
 
-  if (pose === 1) {
-    drawCage();
-    sitting();
-  } else if (pose === 2) {
-    drawCage();
-    standing();
-  } else if (pose === 3) {
-    drawCage();
-    push1();
-  } else if (pose === 4) {
-    bentCage();
-    push2();
-  } else if (pose == 5) {
-    bentCage();
-    walkAway1();
-  } else if (pose == 6) {
-    bentCage();
-    walkAway2();
+ 
+    if (option == 2) {
+      if (frameCounter2++ >= FRAME_DELAY2) {
+        frameCounter2 = 0;
+        chainBroken = !chainBroken; 
+      }
+      drawChain(chainBroken);
+    }
+
+    if (option == 3) {
+      fill(0);
+      triangle(0,900,900,0,900,900);
+
+      if (frameCounter3++ >= FRAME_DELAY2) {
+        frameCounter3 = 0;
+        walk = !walk; 
+      }
+
+      posX += walkSpeed;
+      posY -= walkSpeed;
+    
+
+      if (posX > 337) {
+        posX = 44;
+        posY = 684;
+      }
+      
+      uphill(walk, posX, posY);
+    }
+
+
   }
-}
+
+  function uphill(walk, x, y) {
+
+ 
+      
+      for (let i=0; i<200; i++) {
+      fill(0);
+      circle(x,y,40);
+
+      strokeWeight(4);
+      
+      //torso
+      line(x,y,x , y+ 76);
+      //arms
+      line(x, y + 43, x + 65, y + 10);
+
+      //legs1
+      if (walk) {
+        // Walking stance 1
+        line(x, y + 76, x + 56, y + 108);
+        line(x, y + 76, x + 6, y + 165);
+      } else {
+        // Walking stance 2
+        line(x, y + 76, x + 34, y + 140);
+        line(x, y + 76, x + 77, y + 91);
+      }
+      fill(0);
+      circle(x+137,y-16,200);
+    }
+    
+    
+  }
+
+
+  function drawChain(chainBroken) {
+    let centerX = 450;
+    let centerY = 450;
+    let linkSize = 100; 
+    let gap = 20;
+
+    stroke(0);
+    noFill();
+    
+    for (let i = -4; i <= 4; i++) {
+          let x = centerX + i * (linkSize + gap);
+          noFill();
+          stroke(0);
+          strokeWeight(8);
+          ellipse(x, centerY, linkSize * 1.5 , linkSize, 8);
+  }
+  if (chainBroken) {
+    background(255,255,255);
+    for (let i = -4; i <= 4; i++) {
+        let x = centerX + i * (linkSize + gap);
+        if (i <= 0) {
+          x -= 20;
+        } else if (i > 0) {
+          x += 20;
+        }
+        noFill();
+        stroke(0);
+        strokeWeight(8);
+        ellipse(x, centerY, linkSize * 1.5 , linkSize, 8);
+
+      }
+      fill(255,255,255);
+      stroke(255,255,255);
+      rect(430,336,120,220);
+
+      stroke(0);
+      line(436, 339, 468, 370);
+      line(562,342,539,369);
+      line(441, 545, 406, 577);
+      line(522,544,547,566);
+    }
+    
+
+   
+  }
+
+
+
 
 function walkAway1() {
   fill(0);
@@ -204,5 +337,17 @@ function drawCage() {
 
 function mouseClicked() {
   print(mouseX, mouseY);
-  frameCounter = 0;
+}
+
+function keyTyped() {
+  if (key=='r') {
+  if (option == 4) {
+    option = 1;
+  } else {
+    option++;
+  }
+}
+if (key =='p') {
+  isPaused = !isPaused;
+}
 }
