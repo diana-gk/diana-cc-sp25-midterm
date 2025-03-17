@@ -1,6 +1,5 @@
 let option = 1;
 
-
 let pose = 1;
 let frameCounter = 0;
 let frameCounter2 = 0;
@@ -58,7 +57,6 @@ function draw() {
     }
   }
 
- 
     if (option == 2) {
       if (frameCounter2++ >= FRAME_DELAY2) {
         frameCounter2 = 0;
@@ -86,10 +84,28 @@ function draw() {
       }
       
       uphill(walk, posX, posY);
+      handDescend();
     }
-
-
   }
+
+  function handDescend() {
+    stroke(0);
+    strokeWeight(4);
+    beginShape();
+    
+
+    vertex(378, 65);
+    vertex(376, 173);
+    vertex(411,173);
+    vertex(411,106);
+    vertex(539, 106);
+    vertex(536, 179);
+    vertex(571,179);
+    vertex(567,65);
+
+    endShape();
+  }
+
 
   function uphill(walk, x, y) {
 
@@ -118,11 +134,8 @@ function draw() {
       }
       fill(0);
       circle(x+137,y-16,200);
-    }
-    
-    
+    } 
   }
-
 
   function drawChain(chainBroken) {
     let centerX = 450;
@@ -165,13 +178,7 @@ function draw() {
       line(441, 545, 406, 577);
       line(522,544,547,566);
     }
-    
-
-   
   }
-
-
-
 
 function walkAway1() {
   fill(0);
@@ -283,17 +290,13 @@ function bentCage() {
 
   bezier(473,443,513,486,514,629,472,700);
 
-
-
   line(328, 883, 328, 250);
   line(241, 878, 241, 250);
   line(163, 867, 163, 250);
   line(105, 855, 105, 250);
   
   ellipse(400, 250, 650, 100); 
-
 }
-
 
 function sitting() {
   strokeWeight(10);
@@ -351,3 +354,4 @@ if (key =='p') {
   isPaused = !isPaused;
 }
 }
+
