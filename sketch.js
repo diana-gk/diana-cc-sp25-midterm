@@ -1,3 +1,4 @@
+
 let option = 1;
 
 let pose = 1;
@@ -15,7 +16,7 @@ let posX = 44;
 let posY = 684;
 let walkSpeed = 2; 
 
-let chainState = 0; // 0 = normal, 1 = vibrating, 2 = broken
+let chainState = 1; 
 let vibrationIntensity = 0;
 let vibrationMaxIntensity = 8;
 let vibrationTime = 0;
@@ -33,17 +34,40 @@ let clouds = [];
 const NUM_CLOUDS = 10;
 const CLOUD_SPEED = 0.5;
 
-let animationStage = 0; // 0=sitting, 1=standing/pushing, 2=pulling cage, 3=breaking cage, 4=walking away, 5=off screen
+let animationStage = 0; // 0=sitting, 1=standing/pushing, 2=pulling cage, 3=breaking cage, 4=walking away
 let hasWalkedOff = false;
 let pullCounter = 0;
 const PULL_ATTEMPTS = 6; 
 let barOffset = 0; 
 let barBroken = false; 
 
+clawY = 65;
+clawGrabbed = false;
+option3CelebrationTime = 0;
+option3State = 0;
+
+
+let armAngle = Math.PI/6;  
+let armWaveDirection = 1;  
+let armWaveSpeed = 0.03;   
+let celebrationTime = 0;
+let celebrationDuration = 180;
+
+let bgStartColor;
+let bgEndColor;
+let bgCurrentColor;
+let bgTransitionProgress = 0;
+
+let hillColor; 
+
+
 function setup() {
   createCanvas(900, 900, WEBGL);
   background(255, 255, 255);
-  let startAngle = PI;
+  
+  bgStartColor = color(97, 99, 105);  
+  bgEndColor = color(10, 190, 255);   
+  bgCurrentColor = bgStartColor;      
   
   for (let i = 0; i < NUM_CLOUDS; i++) {
     clouds.push({
@@ -55,7 +79,10 @@ function setup() {
       numBubbles: floor(random(3, 6)) 
     });
   }
+
+  hillColor = color(0);
 }
+
 
 function draw() {
   if (isPaused) return;
@@ -212,17 +239,36 @@ function draw() {
     }
   }
 
+
+
   if (option == 2) {
-    background(255);
+
+    if (chainState == 1) {
+      background(97, 99, 105);
+      bgTransitionProgress = 0; 
+    } else {
+      // For chainState 2 and onwards, gradually transition the background color
+      if (bgTransitionProgress < 1) {
+        bgTransitionProgress += 0.13; // Adjust this value to control transition speed
+      }
+      
+      // Calculate the current color using lerp
+      bgCurrentColor = lerpColor(bgStartColor, bgEndColor, bgTransitionProgress);
+      
+      // Set the background to the current transition color
+      background(bgCurrentColor);
+    }
+
     
     if (chainState == 0) {
       if (frameCounter2++ >= FRAME_DELAY) {
-        frameCounter2 = 0;
+        
         chainState = 1; 
       }
       drawChain(false, 0); 
     } 
     else if (chainState == 1) { //chain vibrating
+      
       vibrationTime++;
       
       vibrationIntensity = map(vibrationTime, 0, vibrationDuration, 0, vibrationMaxIntensity);
@@ -248,26 +294,104 @@ function draw() {
 
   if (option == 3) {
     background(255);
-    fill(0);
-    triangle(0,900,900,0,900,900);
-
-    if (frameCounter3++ >= FRAME_DELAY) {
-      frameCounter3 = 0;
-      walk = !walk; 
-    }
-
-    posX += walkSpeed;
-    posY -= walkSpeed;
   
-    if (posX > 337) {
-      posX = 44;
-      posY = 684;
-    }
     
-    uphill(walk, posX, posY);
-    clawDescend();
+    if (option3State === 0) { //walking uphill 
+      if (frameCounter3++ >= FRAME_DELAY) {
+        frameCounter3 = 0;
+        walk = !walk;
+      }
+  
+      posX += walkSpeed;
+      posY -= walkSpeed;
+      
+     
+      clawY += 1.5; 
+      
+      if (posX > 370) {
+        option3State = 1;
+        posX = 370;
+        posY = 390;
+      }
+      
+      fill(0);
+      triangle(0,900,900,0,900,900);
+      
+      uphill(walk, posX, posY);
+      clawPosition(clawY); 
+    }
+    else if (option3State === 1) { //claw grabs boulder
+      frameCounter3++;
+      if (frameCounter3 >= 30) { 
+        frameCounter3 = 0;
+        option3State = 2;
+      }
+      
+      fill(0);
+      triangle(0,900,900,0,900,900);
+      
+      uphill(false, posX, posY); 
+      clawPosition(clawY, true); 
+    }
+    else if (option3State === 2) { //claw lifting boulder
+      clawY -= 3; 
+      
+      // Start at clawY = 370 (when grabbed), end at clawY = 30 (fully up)
+      let transitionProgress = map(clawY, 370, 30, 0, 1, true);
+      
+      let skyColor = lerpColor(color(255), color(135, 206, 250), transitionProgress);
+      background(skyColor);
+      
+      // Transition hill color from black to green
+      hillColor = lerpColor(color(0), color(34, 139, 34), transitionProgress);
+      fill(hillColor);
+      triangle(0,900,900,0,900,900);
+      
+      
+     
+      if (clawY <= 30) {
+        option3State = 3; 
+        clawY = 30;
+        option3CelebrationTime = 0;
+      }
+      
+      uphillWithoutBoulder(false, posX, posY); 
+      clawPositionWithBoulder(clawY); 
+    }
+
+    else if (option3State === 3) { //celebrating
+      
+      for (let y = 0; y < height; y++) {
+        let inter = map(y, 0, height, 0, 1);
+        let c = lerpColor(color(135, 206, 250), color(200, 255, 255), inter); // Brighter blue sky
+        stroke(c);
+        line(0, y, width, y);
+      }
+    
+      
+      fill(34, 139, 34); // Forest green
+      triangle(0,900,900,0,900,900);
+      
+  
+      clawPositionWithBoulder(30);
+      
+      celebrateFigure(posX, posY);
+      
+      
+      // Reset after celebration time
+      if (option3CelebrationTime >= 300) {
+        option3State = 0;
+        posX = 44;
+        posY = 684;
+        clawY = 65;
+        clawGrabbed = false;
+        hillColor = color(0); 
+      }
+    }
   }
 }
+
+
 
 function drawChainLinkInnerEllipses(x, y, width, height) {
   const numInnerEllipses = 3;
@@ -323,7 +447,6 @@ function drawChain(chainBroken, vibration) {
     }
   } else {
     // broken chain
-    background(255,255,255);
     
     for (let i = -4; i <= 0; i++) {
       let horizontalShift = i == 0 ? -35 : -20;
@@ -349,8 +472,8 @@ function drawChain(chainBroken, vibration) {
       drawChainLinkInnerEllipses(x, centerY, linkSize * 1.5, linkSize);
     }
     
-    fill(255,255,255);
-    stroke(255,255,255);
+    fill(bgCurrentColor);
+    stroke(bgCurrentColor);
     rect(430,336,120,220);
 
     stroke(0);
@@ -409,7 +532,13 @@ function pullCage2() {
 
 function drawShakingCage(offset) {
   push();
-  translate(sin(frameCount * 0.3) * (offset * 0.15), 0);
+  
+  let shakeIntensity = offset * 0.3;
+  
+  let randomShakeX = random(-2, 2) * pullCounter;
+  let randomShakeY = random(-1, 1) * pullCounter;
+  
+  translate(sin(frameCount * 0.3) * shakeIntensity + randomShakeX, cos(frameCount * 0.2) * (pullCounter * 0.5) + randomShakeY);
   
   stroke(0);
   strokeWeight(8);
@@ -422,17 +551,23 @@ function drawShakingCage(offset) {
   line(637, 867, 637, 250);
   line(559, 878, 559, 250);
   
-  // center bars shaking
-  line(472 + offset * 1.5, 883, 472 + offset * 0.8, 250);
-  line(400 + offset * -1.5, 885, 400 + offset * -0.8, 250);
+//center bar movement
+  line(472 + offset * 2.0, 883, 472 + offset * 1.2, 250);
+  line(400 + offset * -2.0, 885, 400 + offset * -1.2, 250);
   
-  // other bars
-  line(328, 883, 328, 250);
-  line(241, 878, 241, 250);
-  line(163, 867, 163, 250);
-  line(105, 855, 105, 250);
+//for other bars
+  let minorOffset = sin(frameCount * 0.4) * (pullCounter * 0.3);
   
-  ellipse(400, 250, 650, 100);
+  line(328 + minorOffset, 883, 328 + minorOffset * 0.5, 250);
+  line(241 + minorOffset * 0.7, 878, 241 + minorOffset * 0.3, 250);
+  line(163 + minorOffset * 0.5, 867, 163 + minorOffset * 0.2, 250);
+  line(105 + minorOffset * 0.3, 855, 105 + minorOffset * 0.1, 250);
+  
+  // ellipse deformation
+  push();
+  translate(0, sin(frameCount * 0.2) * (pullCounter * 0.7));
+  ellipse(400, 250, 650 + sin(frameCount * 0.3) * (pullCounter * 2), 100);
+  pop();
   
   pop(); 
 }
@@ -563,48 +698,139 @@ function drawCelestialBodies() {
   pop();
 }
 
-function clawDescend() {
+function clawPosition(y, closed = false) {
+  stroke(0);
+  fill(0);
+  strokeWeight(4);
+  
+  beginShape();
+  vertex(378, y);
+  vertex(376, y + 108);
+  vertex(411, y + 108);
+  vertex(411, y + 41);
+  vertex(539, y + 41);
+  vertex(536, y + 114);
+  vertex(571, y + 114);
+  vertex(567, y);
+  endShape(CLOSE);
+  
+  if (closed) {
+    line(411, y + 41, 471, y + 90); 
+    line(539, y + 41, 479, y + 90); 
+  } else {
+    line(411, y + 41, 411, y + 90); 
+    line(539, y + 41, 539, y + 90); 
+  }
+}
+
+function clawPositionWithBoulder(y) {
   stroke(0);
   strokeWeight(4);
-  beginShape();
+  fill(0);
   
-  vertex(378, 65);
-  vertex(376, 173);
-  vertex(411,173);
-  vertex(411,106);
-  vertex(539, 106);
-  vertex(536, 179);
-  vertex(571,179);
-  vertex(567,65);
+  beginShape();
+  vertex(378, y);
+  vertex(376, y + 108);
+  vertex(411, y + 108);
+  vertex(411, y + 41);
+  vertex(539, y + 41);
+  vertex(536, y + 114);
+  vertex(571, y + 114);
+  vertex(567, y);
+  endShape(CLOSE);
+  
+  line(411, y + 41, 471, y + 90); 
+  line(539, y + 41, 479, y + 90); 
+  
+  fill(0);
+  circle(475, y + 120, 100);
+}
 
-  endShape();
+function uphillWithoutBoulder(walk, x, y) {
+  fill(0);
+  circle(x, y, 40);
+
+  strokeWeight(4);
+  
+  //torso
+  line(x, y, x, y + 76);
+  
+  let armAngle = PI/4; 
+  line(x, y + 43, x - cos(armAngle) * 65, y + 43 - sin(armAngle) * 65); // Left arm 
+  line(x, y + 43, x + cos(armAngle) * 65, y + 43 - sin(armAngle) * 65); // Right arm 
+
+  //legs
+  if (walk) {
+    // Walking stance 1
+    line(x, y + 76, x + 56, y + 108);
+    line(x, y + 76, x + 6, y + 165);
+  } else {
+    // Walking stance 2
+    line(x, y + 76, x + 34, y + 140);
+    line(x, y + 76, x + 77, y + 91);
+  }
+}
+
+function celebrateFigure(x, y) {
+  let jumpHeight = sin(frameCount * 0.15) * 15;
+  
+  let jumpY = y + jumpHeight; 
+  
+  fill(0);
+  stroke(0);
+  circle(x, jumpY, 40); 
+
+  strokeWeight(4);
+  
+  line(x, jumpY, x, jumpY + 76);
+  
+  let baseArmAngle = PI/3; 
+  let waveOffset = sin(frameCount * 0.2) * 0.25; 
+  
+  let leftArmAngle = baseArmAngle + waveOffset;
+  line(x, jumpY + 43, x - cos(leftArmAngle) * 65, jumpY + 43 - sin(leftArmAngle) * 65);
+  
+  let rightArmAngle = baseArmAngle - waveOffset;
+  line(x, jumpY + 43, x + cos(rightArmAngle) * 65, jumpY + 43 - sin(rightArmAngle) * 65);
+
+  let legBend = abs(jumpHeight) * 0.2; 
+  
+  let leftLegX = x - 20 - (jumpHeight * 0.3); 
+  let leftLegY = jumpY + 140 - legBend; 
+  line(x, jumpY + 76, leftLegX, leftLegY);
+  
+  let rightLegX = x + 20 + (jumpHeight * 0.3); 
+  let rightLegY = jumpY + 140 - legBend; 
+  line(x, jumpY + 76, rightLegX, rightLegY);
+  
+  
+  
 }
 
 function uphill(walk, x, y) {
-  for (let i=0; i<200; i++) {
-    fill(0);
-    circle(x,y,40);
+  fill(0);
+  circle(x, y, 40);
 
-    strokeWeight(4);
-    
-    //torso
-    line(x,y,x , y+ 76);
-    //arms
-    line(x, y + 43, x + 65, y + 10);
+  strokeWeight(4);
+  
+  //torso
+  line(x, y, x, y + 76);
+  //arms
+  line(x, y + 43, x + 65, y + 10);
 
-    //legs1
-    if (walk) {
-      // Walking stance 1
-      line(x, y + 76, x + 56, y + 108);
-      line(x, y + 76, x + 6, y + 165);
-    } else {
-      // Walking stance 2
-      line(x, y + 76, x + 34, y + 140);
-      line(x, y + 76, x + 77, y + 91);
-    }
-    fill(0);
-    circle(x+137,y-16,200);
-  } 
+  //legs
+  if (walk) {
+    // Walking stance 1
+    line(x, y + 76, x + 56, y + 108);
+    line(x, y + 76, x + 6, y + 165);
+  } else {
+    // Walking stance 2
+    line(x, y + 76, x + 34, y + 140);
+    line(x, y + 76, x + 77, y + 91);
+  }
+  
+  fill(0);
+  circle(x + 110, y - 5, 100);
 }
 
 function walking(walk, x, y) {
@@ -820,6 +1046,8 @@ function drawCage() {
   ellipse(400, 250, 650, 100); 
 }
 
+
+
 function mouseClicked() {
   print(mouseX, mouseY);
 }
@@ -839,6 +1067,7 @@ function keyTyped() {
     chainState = 0;
     vibrationIntensity = 0;
     vibrationTime = 0;
+    
     
     for (i = 0; i < clouds.length; ++i) {
       let cloud = clouds[i];
